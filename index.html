@@ -99,6 +99,19 @@
         .gear-btn:active{background:#e0e0e0}
         .back-btn{background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:#1565C0;font-weight:700}
 
+        /* ---- АЛИСА ---- */
+        .alice-hint{background:#FFF3E0;border:1px solid #FFB74D;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#E65100;line-height:1.5}
+        .alice-toggle{background:none;border:none;color:#E65100;font-weight:700;font-size:13px;cursor:pointer;padding:0;text-decoration:underline}
+        .prompt-box{background:#FFF8E1;border:2px solid #FFC107;border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:#5D4037;line-height:1.5;display:none}
+        .prompt-box.visible{display:block}
+        .prompt-box pre{white-space:pre-wrap;font-family:inherit;margin-bottom:8px;font-size:12px}
+        .copy-btn{background:#FFC107;color:#333;border:none;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:700}
+        textarea{width:100%;padding:12px;border:2px solid #ddd;border-radius:10px;font-size:15px;font-family:inherit;background:#fff;min-height:160px;resize:vertical;-webkit-appearance:none}
+        textarea:focus{outline:none;border-color:#1565C0}
+        .mode-tabs{display:flex;gap:8px;margin-bottom:14px}
+        .mode-tab{flex:1;padding:11px;border:2px solid #ddd;border-radius:10px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;text-align:center;transition:all .18s;color:#888}
+        .mode-tab.active{border-color:#1565C0;background:#E3F2FD;color:#1565C0}
+
         /* ---- SELECTED TABLE BANNER ---- */
         .selected-banner{background:#E3F2FD;border:2px solid #1565C0;border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
         .selected-banner .sname{font-weight:700;font-size:15px;color:#0D47A1}
@@ -136,7 +149,14 @@
         <button class="change-btn" onclick="showScreen('screenSelect')">Сменить</button>
     </div>
 
-    <div class="form-card">
+    <!-- ВКЛАДКИ -->
+    <div class="mode-tabs">
+        <div class="mode-tab active" id="tabManual" onclick="switchTab('manual')">✏️ Вручную</div>
+        <div class="mode-tab" id="tabAlice" onclick="switchTab('alice')">🎙 Алиса</div>
+    </div>
+
+    <!-- ВКЛАДКА: ВРУЧНУЮ -->
+    <div id="panelManual" class="form-card">
         <div class="form-card-title">Добавить товар</div>
         <div class="add-form-row">
             <input class="add-name" id="addName" placeholder="Наименование" onkeydown="if(event.key==='Enter')document.getElementById('addQty').focus()">
@@ -144,6 +164,29 @@
             <input class="add-price" id="addPrice" placeholder="Цена/шт" type="number" step="0.01" onkeydown="if(event.key==='Enter')addItem()">
         </div>
         <button class="btn btn-blue" onclick="addItem()">＋ Добавить</button>
+    </div>
+
+    <!-- ВКЛАДКА: АЛИСА -->
+    <div id="panelAlice" style="display:none">
+        <div class="alice-hint">
+            📱 Открой Алису → отправь промт → сфотографируй чек → скопируй ответ → вставь сюда
+            <br><br>
+            <button class="alice-toggle" onclick="togglePrompt()">📋 Показать промт для Алисы</button>
+        </div>
+        <div id="promptBox" class="prompt-box">
+            <pre>Распознай чек с фото. Выдай ТОЛЬКО в таком формате:
+
+ТОВАР: название | кол-во | цена за шт
+ИТОГО: число
+
+Числа без "руб" и "₽". Никаких комментариев и реквизитов.</pre>
+            <button class="copy-btn" onclick="copyPrompt()">📋 Скопировать промт</button>
+        </div>
+        <div class="form-card">
+            <div class="form-card-title">Текст от Алисы</div>
+            <textarea id="aliceText" placeholder="Вставь текст от Алисы..."></textarea>
+            <button class="btn btn-blue" onclick="parseAlice()" style="margin-top:10px">🔍 Распознать и добавить</button>
+        </div>
     </div>
 
     <div class="form-card">
@@ -271,6 +314,56 @@ function selectTable(t) {
     document.getElementById("bannerSheet").textContent = "Лист: " + t.sheetName;
     renderTablesList();
     showScreen("screenInput");
+}
+
+// ===== ВКЛАДКИ =====
+function switchTab(tab) {
+    document.getElementById("tabManual").classList.toggle("active", tab === "manual");
+    document.getElementById("tabAlice").classList.toggle("active", tab === "alice");
+    document.getElementById("panelManual").style.display = tab === "manual" ? "" : "none";
+    document.getElementById("panelAlice").style.display  = tab === "alice"  ? "" : "none";
+}
+
+function togglePrompt() {
+    var box = document.getElementById("promptBox");
+    box.classList.toggle("visible");
+}
+
+function copyPrompt() {
+    var pre = document.querySelector("#promptBox pre");
+    navigator.clipboard.writeText(pre.textContent.trim()).then(function(){
+        alert("Промт скопирован!");
+    });
+}
+
+// ===== ПАРСЕР АЛИСЫ =====
+function parseAlice() {
+    var text = document.getElementById("aliceText").value.trim();
+    if (!text) { alert("Вставь текст от Алисы!"); return; }
+    var lines = text.split("\n");
+    var added = 0;
+    lines.forEach(function(line) {
+        line = line.trim();
+        // Формат: ТОВАР: название | кол-во | цена
+        var m = line.match(/^ТОВАР:\s*(.+?)\s*\|\s*([\d.,]+)\s*\|\s*([\d.,]+)/i);
+        if (m) {
+            var name  = m[1].trim();
+            var qty   = m[2].replace(",", ".");
+            var price = m[3].replace(",", ".");
+            if (name && !isNaN(parseFloat(price))) {
+                items.push({ name: name, qty: qty, price: price });
+                added++;
+            }
+        }
+    });
+    if (added === 0) {
+        alert("Товары не найдены. Проверь формат — строки должны начинаться с ТОВАР:");
+        return;
+    }
+    document.getElementById("aliceText").value = "";
+    renderItems();
+    switchTab("manual");
+    alert("Добавлено товаров: " + added);
 }
 
 // ===== ТОВАРЫ =====
