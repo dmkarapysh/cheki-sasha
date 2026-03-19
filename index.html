@@ -345,8 +345,8 @@ function parseAlice() {
     var added = 0;
     for (var i = 1; i < chunks.length; i++) {
         var chunk = chunks[i].trim();
-        // Формат: название | кол-во | цена
-        var m = chunk.match(/^(.+?)\s*\|\s*([\d.,]+)\s*\|\s*([\d.,]+)/);
+        // Формат: название | кол-во (может быть "18 шт.") | цена
+        var m = chunk.match(/^(.+?)\s*\|\s*([\d.,]+)\s*(?:шт\.?|кг\.?|л\.?|уп\.?)?\s*\|\s*([\d.,]+)/);
         if (m) {
             var name  = m[1].trim();
             var qty   = m[2].replace(",", ".");
@@ -440,13 +440,13 @@ function saveToSheet() {
     .then(function(text) {
         try {
             var res = JSON.parse(text);
-            if (res.status === "ok") showResult(true, "Сохранено! ✓", items.length + " строк записано");
+            if (res.status === "ok") showResult(true, "Сохранено! ✓", (items ? items.length : "") + " строк записано");
             else showResult(false, "Ошибка", res.message || "");
         } catch(e) {
             if (text.indexOf("Moved") !== -1 || text.indexOf("<HTML>") !== -1)
                 showResult(true, "Сохранено! ✓", items.length + " строк записано");
             else
-                showResult(false, "Ошибка ответа", text.substring(0, 80));
+                showResult(false, "Ошибка ответа", text.substring(0, 150) + " || " + e.message);
         }
     })
     .catch(function(err){ showResult(false, "Ошибка сети", err.message); });
