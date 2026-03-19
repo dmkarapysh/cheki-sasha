@@ -340,12 +340,13 @@ function copyPrompt() {
 function parseAlice() {
     var text = document.getElementById("aliceText").value.trim();
     if (!text) { alert("Вставь текст от Алисы!"); return; }
-    var lines = text.split("\n");
+    // Разбиваем по ТОВАР: — работает и в одну строку, и по строкам
+    var chunks = text.split(/ТОВАР:/i);
     var added = 0;
-    lines.forEach(function(line) {
-        line = line.trim();
-        // Формат: ТОВАР: название | кол-во | цена
-        var m = line.match(/^ТОВАР:\s*(.+?)\s*\|\s*([\d.,]+)\s*\|\s*([\d.,]+)/i);
+    for (var i = 1; i < chunks.length; i++) {
+        var chunk = chunks[i].trim();
+        // Формат: название | кол-во | цена
+        var m = chunk.match(/^(.+?)\s*\|\s*([\d.,]+)\s*\|\s*([\d.,]+)/);
         if (m) {
             var name  = m[1].trim();
             var qty   = m[2].replace(",", ".");
@@ -355,9 +356,9 @@ function parseAlice() {
                 added++;
             }
         }
-    });
+    }
     if (added === 0) {
-        alert("Товары не найдены. Проверь формат — строки должны начинаться с ТОВАР:");
+        alert("Товары не найдены. Скинь текст от Алисы в чат — разберёмся!");
         return;
     }
     document.getElementById("aliceText").value = "";
