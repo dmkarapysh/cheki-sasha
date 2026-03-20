@@ -245,6 +245,23 @@
             <label>Название листа</label>
             <input type="text" id="newSheet" placeholder="Лист1">
         </div>
+        <div class="field">
+            <label>Столбцы (буква колонки)</label>
+            <div style="display:flex;gap:8px">
+                <div style="flex:1">
+                    <div class="field-hint" style="margin-bottom:4px">Наименование</div>
+                    <input type="text" id="newColName" placeholder="A" maxlength="2" style="text-align:center;text-transform:uppercase">
+                </div>
+                <div style="flex:1">
+                    <div class="field-hint" style="margin-bottom:4px">Количество</div>
+                    <input type="text" id="newColQty" placeholder="C" maxlength="2" style="text-align:center;text-transform:uppercase">
+                </div>
+                <div style="flex:1">
+                    <div class="field-hint" style="margin-bottom:4px">Сумма/Цена</div>
+                    <input type="text" id="newColPrice" placeholder="D" maxlength="2" style="text-align:center;text-transform:uppercase">
+                </div>
+            </div>
+        </div>
         <button class="btn btn-blue" onclick="addTable()" style="background:#4CAF50">Сохранить таблицу</button>
     </div>
 
@@ -254,9 +271,8 @@
 
 <script>
 // ===== КОНФИГ =====
+// Столбцы берутся из выбранной таблицы
 var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxiHCZDLRzRLlNynsFdJz-ay7OhuDF9lO3AiRcb--Um_yATCh6HKmHZS-kIhgdoxBLtxw/exec";
-// Столбцы фиксированные: C=наименование, D=кол-во, E=цена
-var COLS = {name: "C", qty: "D", price: "E"};
 
 // ===== СОСТОЯНИЕ =====
 var tables = [];        // [{id, name, sheetName}]
@@ -420,11 +436,12 @@ function saveToSheet() {
 
     showScreen("screenLoading");
 
+    var cols = selectedTable.cols || {name:"C", qty:"D", price:"E"};
     var rows = items.map(function(it) {
         var r = {};
-        r[COLS.name]  = it.name;
-        r[COLS.qty]   = String(it.qty);
-        r[COLS.price] = String(it.price);
+        r[cols.name]  = it.name;
+        r[cols.qty]   = String(it.qty);
+        r[cols.price] = String(it.price);
         return r;
     });
 
@@ -432,6 +449,7 @@ function saveToSheet() {
         action: "save",
         spreadsheetId: selectedTable.id,
         sheetName: selectedTable.sheetName,
+        cols: cols,
         rows: rows
     };
 
@@ -503,14 +521,20 @@ function addTable() {
     var name  = document.getElementById("newName").value.trim();
     var id    = document.getElementById("newId").value.trim();
     var sheet = document.getElementById("newSheet").value.trim();
+    var colName  = (document.getElementById("newColName").value.trim() || "C").toUpperCase();
+    var colQty   = (document.getElementById("newColQty").value.trim() || "D").toUpperCase();
+    var colPrice = (document.getElementById("newColPrice").value.trim() || "E").toUpperCase();
     if (!name) { alert("Введи название!"); return; }
     if (!id)   { alert("Введи ID таблицы!"); return; }
     if (!sheet){ alert("Введи название листа!"); return; }
-    tables.push({ id: id, name: name, sheetName: sheet });
+    tables.push({ id: id, name: name, sheetName: sheet, cols: {name: colName, qty: colQty, price: colPrice} });
     saveTables();
     document.getElementById("newName").value = "";
     document.getElementById("newId").value = "";
     document.getElementById("newSheet").value = "";
+    document.getElementById("newColName").value = "";
+    document.getElementById("newColQty").value = "";
+    document.getElementById("newColPrice").value = "";
     renderSettingsList();
     alert("Таблица добавлена: " + name);
 }
